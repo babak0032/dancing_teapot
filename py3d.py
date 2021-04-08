@@ -134,5 +134,5 @@ for dd, ff in FLIST:
                 im.putpixel((xpos, ypos), (c,c,c))
 
 print()
-im.save("img%04u.png" % int(sys.argv[3]))
+im.save(sys.argv[3])
 
