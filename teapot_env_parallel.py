@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
-from queue import Queue
-from threading import Thread
+from multiprocessing import Queue, JoinableQueue, Process
 from teapot_env import render_teapot
 import utils
 
@@ -15,16 +14,16 @@ class Parallel:
 
         self.task_queue = Queue()
         self.result_queue = Queue()
-        self.threads = []
+        self.processes = []
 
     def run_threads(self):
 
         for _ in range(self.num_jobs):
 
-            t = Thread(target=self.worker_fc, args=[self.task_queue, self.result_queue])
-            t.start()
+            p = Process(target=self.worker_fc, args=(self.task_queue, self.result_queue))
+            p.start()
 
-            self.threads.append(t)
+            self.processes.append(p)
 
     def add(self, bundle):
 
@@ -39,8 +38,8 @@ class Parallel:
         for _ in range(self.num_jobs):
             self.task_queue.put(None)
 
-        for thread in self.threads:
-            thread.join()
+        for process in self.processes:
+            process.join()
 
 
 def worker_fc(task_queue, result_queue):
@@ -96,9 +95,8 @@ def main(args):
         print("iter " + str(i))
 
     parallel.run_threads()
-    parallel.stop()
 
-    for _ in range(args.num_timesteps):
+    for _ in range(args.num_timesteps + 1):
 
         image, index = parallel.get()
 
@@ -107,6 +105,8 @@ def main(args):
 
         if index > 0:
             replay_buffer['next_obs'][index - 1] = image
+
+    parallel.stop()
 
     # Save replay buffer to disk.
     utils.save_list_dict_h5py(replay_buffer, args.fname)
