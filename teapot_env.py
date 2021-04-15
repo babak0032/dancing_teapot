@@ -9,6 +9,7 @@ def render_teapot(alpha,beta):
     FN = "teapot_small.obj"
     #FN = "entire_shape.obj"
     xs, ys = 128,128    # image size
+    xs_res, ys_res = 64, 64
     M = 15               # number of sampled points per face,
                         #     increase if there are black dots
     lx,ly,lz=1,-1,-1    # light source direction
@@ -43,7 +44,7 @@ def render_teapot(alpha,beta):
             z = z.split("/")[0]
             F.append([int(x), int(y), int(z)])
 
-    print(f"{len(V)} vertices, {len(N)} normals, {len(F)} faces")
+    #print(f"{len(V)} vertices, {len(N)} normals, {len(F)} faces")
 
     w1 = sin(alpha) #w1 = 1 
     w2 = cos(alpha) #w2 = 0
@@ -138,6 +139,8 @@ def render_teapot(alpha,beta):
                 if zzz < zbuf[zind]:
                     zbuf[zind] = zzz
                     im.putpixel((xpos, ypos), (c,c,c))
+
+    im = im.resize((xs_res, ys_res), resample=Image.BICUBIC)
 
     pix = np.array(im.getdata()).reshape(im.size[0], im.size[1], 3)
     return pix

@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 from multiprocessing import Queue, JoinableQueue, Process
+from PIL import Image
 from teapot_env import render_teapot
 import utils
 
