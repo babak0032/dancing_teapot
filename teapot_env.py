@@ -7,8 +7,9 @@ from math import *
 
 def render_teapot(alpha,beta):
     FN = "teapot_small.obj"
-    xs, ys = 500,500    # image size
-    M = 10              # number of sampled points per face,
+    #FN = "entire_shape.obj"
+    xs, ys = 128,128    # image size
+    M = 15               # number of sampled points per face,
                         #     increase if there are black dots
     lx,ly,lz=1,-1,-1    # light source direction
     AMB = 70            # ambient light intensity
@@ -31,7 +32,7 @@ def render_teapot(alpha,beta):
     for l in open(FN):
         if l[0] == "v" and l[1] != "n":
             d, x, y, z = l.split()
-            V.append([float(x), float(y), float(z)])
+            V.append([float(x)*0.3, float(y)*0.3, float(z)*0.3])
         if l[0] == "v" and l[1] == "n":
             d, x, y, z = l.split()
             N.append([float(x), float(y), float(z)])
@@ -44,8 +45,8 @@ def render_teapot(alpha,beta):
 
     print(f"{len(V)} vertices, {len(N)} normals, {len(F)} faces")
 
-    w1 = sin(alpha)
-    w2 = cos(alpha)
+    w1 = sin(alpha) #w1 = 1 
+    w2 = cos(alpha) #w2 = 0
     w3 = sin(beta)
     w4 = cos(beta)
 
@@ -54,9 +55,12 @@ def render_teapot(alpha,beta):
 
     # apply rotation to vertices
     for x,y,z in V:
-        px = x*w1 + y*w2
+        px = x*w1 + y*w2      
         py = x*w2*w4 - y*w1*w4 + z*w3
         pz = x*w3*w2 - y*w3*w1 - z*w4
+        #px = x       
+        #py = - y*w4 + z*w3
+        #pz = - y*w3 - z*w4
         TV.append([px,py,pz])
         # plot each vertex:
         #im.putpixel((int(s*px+xs/2), int(s*py+ys/2)), (255,255,255))
@@ -127,6 +131,8 @@ def render_teapot(alpha,beta):
                 d = (PFAC - zzz) / PFAC     # apply some linear perspective
                 c = int(f1*ca + f2*cb)
                 xpos, ypos = int(xoff+s*d*xxx+xs/2), int(yoff+s*d*yyy+ys/2)
+                if xpos < 0 or ypos < 0 or xpos > xs - 1 or ypos > ys - 1:
+            	    continue
                 zind = ypos * xs + xpos
                 # use Z buffer to determine if a point is visible
                 if zzz < zbuf[zind]:
