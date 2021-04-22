@@ -4,8 +4,15 @@ import utils
 import numpy as np
 from PIL import Image
 from math import *
+from scipy.spatial.transform import Rotation as R
 
-def render_teapot(alpha,beta):
+
+def theta_to_z(theta):
+
+    return R.from_euler('zyx', theta, degrees=False).as_matrix()
+
+
+def render_teapot(alpha, beta, gamma):
     FN = "teapot_small.obj"
     #FN = "entire_shape.obj"
     xs, ys = 128,128    # image size
@@ -19,7 +26,7 @@ def render_teapot(alpha,beta):
     PFAC = 200          # perspective factor,
                         #     a higher value e.g. 1000 will produce less distortion
 
-    im = Image.new("RGB", (xs, ys))
+    im = Image.new("L", (xs, ys))
     zbuf = (xs) * (ys) * [1e6]      # Z buffer array
 
     s = 2       # object scaling factor
@@ -44,34 +51,19 @@ def render_teapot(alpha,beta):
             z = z.split("/")[0]
             F.append([int(x), int(y), int(z)])
 
+    V = np.array(V, dtype=np.float32)
+    N = np.array(N, dtype=np.float32)
+
     #print(f"{len(V)} vertices, {len(N)} normals, {len(F)} faces")
 
-    w1 = sin(alpha) #w1 = 1 
-    w2 = cos(alpha) #w2 = 0
-    w3 = sin(beta)
-    w4 = cos(beta)
+    rot = theta_to_z([alpha, beta, gamma])
+    # print(rot)
+    # print(V.shape, N.shape)
+    TV = np.matmul(V, rot.T)
+    TVN = np.matmul(N, rot.T)
 
     # transformed vertices/vertex normals and average Z distance for each face
-    TV, TVN, FD = [], [], []
-
-    # apply rotation to vertices
-    for x,y,z in V:
-        px = x*w1 + y*w2      
-        py = x*w2*w4 - y*w1*w4 + z*w3
-        pz = x*w3*w2 - y*w3*w1 - z*w4
-        #px = x       
-        #py = - y*w4 + z*w3
-        #pz = - y*w3 - z*w4
-        TV.append([px,py,pz])
-        # plot each vertex:
-        #im.putpixel((int(s*px+xs/2), int(s*py+ys/2)), (255,255,255))
-
-    # apply rotation to vertex normals
-    for x,y,z in N:
-        px = x*w1 + y*w2
-        py = x*w2*w4 - y*w1*w4 + z*w3
-        pz = x*w3*w2 - y*w3*w1 - z*w4
-        TVN.append([px,py,pz])
+    FD = []
 
     # sort faces by depth
     for a,b,c in F:
@@ -138,11 +130,11 @@ def render_teapot(alpha,beta):
                 # use Z buffer to determine if a point is visible
                 if zzz < zbuf[zind]:
                     zbuf[zind] = zzz
-                    im.putpixel((xpos, ypos), (c,c,c))
+                    im.putpixel((xpos, ypos), c)
 
     im = im.resize((xs_res, ys_res), resample=Image.BICUBIC)
 
-    pix = np.array(im.getdata()).reshape(im.size[0], im.size[1], 3)
+    pix = np.array(im.getdata()).reshape(im.size[0], im.size[1], 1)
     return pix
 
 
@@ -172,26 +164,31 @@ if __name__ == '__main__':
                      'state_ids': [],
                      'next_state_ids': []}
        
-    alpha = np.pi / 2.0
+    alpha = np.pi
     beta = 0
+    gamma = 0
+
     rad_step = 2 * np.pi / 30.0
 
-    state = render_teapot(alpha, beta) 
+    state = render_teapot(alpha, beta, gamma)
 
     for i in range(args.num_timesteps):
 
         replay_buffer['obs'].append(state)
         replay_buffer['state_ids'].append((alpha,beta))
 
-        action = np.random.randint(4)
-        deltas = [(rad_step,0),(0,rad_step),(-rad_step,0),(0,-rad_step)]
+        action = np.random.randint(6)
+        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
+                  (0, 0, rad_step), (0, 0, -rad_step)]
         replay_buffer['action'].append(action)
+
         alpha += deltas[action][0]
         beta += deltas[action][1]
+        gamma += deltas[action][2]
 
-        state = render_teapot(alpha, beta)
+        state = render_teapot(alpha, beta, gamma)
         replay_buffer['next_obs'].append(state)
-        replay_buffer['next_state_ids'].append((alpha,beta))
+        replay_buffer['next_state_ids'].append((alpha, beta, gamma))
 
 #    if i % 10 == 0:
         print("iter "+str(i))

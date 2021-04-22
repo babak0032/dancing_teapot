@@ -46,7 +46,7 @@ def save_list_dict_h5py(array_dict, fname):
 
     # Ensure directory exists
     directory = os.path.dirname(fname)
-    if not os.path.exists(directory):
+    if not os.path.isdir(directory):
         os.makedirs(directory)
 
     with h5py.File(fname, 'w') as hf:

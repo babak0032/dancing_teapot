@@ -52,8 +52,8 @@ def worker_fc(task_queue, result_queue):
         if item is None:
             break
 
-        alpha, beta, index = item
-        image = render_teapot(alpha, beta)
+        alpha, beta, gamma, index = item
+        image = render_teapot(alpha, beta, gamma)
 
         result_queue.put((image, index))
 
@@ -70,27 +70,32 @@ def main(args):
                      'state_ids': [],
                      'next_state_ids': []}
 
-    alpha = np.pi / 2.0
+    alpha = np.pi
     beta = 0
+    gamma = 0
+
     rad_step = 2 * np.pi / 30.0
 
     # state = render_teapot(alpha, beta)
-    parallel.add((alpha, beta, 0))
+    parallel.add((alpha, beta, gamma, 0))
 
     for i in range(args.num_timesteps):
         # replay_buffer['obs'].append(state)
-        replay_buffer['state_ids'].append((alpha, beta))
+        replay_buffer['state_ids'].append((alpha, beta, gamma))
 
-        action = np.random.randint(4)
-        deltas = [(rad_step, 0), (0, rad_step), (-rad_step, 0), (0, -rad_step)]
+        action = np.random.randint(6)
+        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
+                  (0, 0, rad_step), (0, 0, -rad_step)]
         replay_buffer['action'].append(action)
+
         alpha += deltas[action][0]
         beta += deltas[action][1]
+        gamma += deltas[action][2]
 
-        # state = render_teapot(alpha, beta)
-        parallel.add((alpha, beta, i + 1))
+        # state = render_teapot(alpha, beta, gamma)
+        parallel.add((alpha, beta, gamma, i + 1))
         # replay_buffer['next_obs'].append(state)
-        replay_buffer['next_state_ids'].append((alpha, beta))
+        replay_buffer['next_state_ids'].append((alpha, beta, gamma))
 
         #    if i % 10 == 0:
         print("iter " + str(i))
