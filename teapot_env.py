@@ -175,10 +175,11 @@ if __name__ == '__main__':
     for i in range(args.num_timesteps):
 
         replay_buffer['obs'].append(state)
-        replay_buffer['state_ids'].append((alpha,beta))
+        replay_buffer['state_ids'].append((alpha, beta, gamma))
 
         action = np.random.randint(6)
-        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
+        deltas = [(rad_step, 0, 0), (-rad_step, 0, 0),
+                  (0, rad_step, 0), (0, -rad_step, 0),
                   (0, 0, rad_step), (0, 0, -rad_step)]
         replay_buffer['action'].append(action)
 
@@ -192,7 +193,6 @@ if __name__ == '__main__':
 
 #    if i % 10 == 0:
         print("iter "+str(i))
-
 
     # Save replay buffer to disk.
     utils.save_list_dict_h5py(replay_buffer, args.fname)
