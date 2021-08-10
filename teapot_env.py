@@ -9,7 +9,9 @@ from scipy.spatial.transform import Rotation as R
 
 def theta_to_z(theta):
 
-    return R.from_euler('zyx', theta, degrees=False).as_matrix()
+    # this is ZYX-intrinsic or 3-2-1 intrinsic
+    # https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Rotation_matrix_%E2%86%94_Euler_angles
+    return R.from_euler('xyz', theta, degrees=False).as_matrix()
 
 
 def render_teapot(alpha, beta, gamma):
