@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 from multiprocessing import Queue, JoinableQueue, Process
 from PIL import Image
+from scipy.spatial.transform import Rotation as R
 from teapot_env import render_teapot
 import utils
 
@@ -52,13 +53,48 @@ def worker_fc(task_queue, result_queue):
         if item is None:
             break
 
-        alpha, beta, gamma, index = item
-        image = render_teapot(alpha, beta, gamma)
+        rot, index = item
+        image = render_teapot(rot)
 
         result_queue.put((image, index))
 
 
+def euler_angles_to_rot_matrix(theta):
+
+    # this is ZYX-intrinsic or 3-2-1 intrinsic
+    # https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Rotation_matrix_%E2%86%94_Euler_angles
+    return R.from_euler('xyz', theta, degrees=False).as_matrix()
+
+
+def prepare_blacklist(paths):
+
+    states = []
+    actions = []
+
+    for p in paths:
+        dset = utils.load_list_dict_h5py(p)
+        states.append(dset['state_matrix'])
+        actions.append(dset['action'])
+
+    states = np.concatenate(states, axis=0)
+    actions = np.concatenate(actions, axis=0)
+
+    return states, actions
+
+
+def check_disjoint(state, action, blacklist_states, blacklist_actions):
+
+    match_state = np.all(np.abs(blacklist_states - state[None]) < 1e-5, axis=(1, 2))
+    match_action = blacklist_actions == action
+    match = np.any(np.logical_and(match_state, match_action))
+    return not match
+
+
 def main(args):
+
+    blacklist_states, blacklist_actions = None, None
+    if args.blacklist_paths is not None:
+        blacklist_states, blacklist_actions = prepare_blacklist(args.blacklist_paths)
 
     parallel = Parallel(args.num_jobs, worker_fc)
 
@@ -66,36 +102,43 @@ def main(args):
 
     replay_buffer = {'obs': [None for _ in range(args.num_timesteps)],
                      'action': [],
+                     'action_matrix': [],
                      'next_obs': [None for _ in range(args.num_timesteps)],
-                     'state_ids': [],
-                     'next_state_ids': []}
+                     'state_matrix': [],
+                     'next_state_matrix': []}
 
-    alpha = np.pi
-    beta = 0
-    gamma = 0
-
+    # [0., 0., 0.] would result in the teapot pointing down
+    start_euler = [np.pi, 0., 0.]
+    state = euler_angles_to_rot_matrix(start_euler)
     rad_step = 2 * np.pi / 30.0
 
     # state = render_teapot(alpha, beta)
-    parallel.add((alpha, beta, gamma, 0))
+    parallel.add((state, 0))
 
     for i in range(args.num_timesteps):
-        # replay_buffer['obs'].append(state)
-        replay_buffer['state_ids'].append((alpha, beta, gamma))
 
+        # save state matrix
+        replay_buffer['state_matrix'].append(state)
+
+        # move in one of six directions by 1 / 30 of a circle
         action = np.random.randint(6)
         deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
                   (0, 0, rad_step), (0, 0, -rad_step)]
+
+        # turn euler angle delta into a rotation matrix
+        action_euler = list(deltas[action])
+        action_matrix = euler_angles_to_rot_matrix(action_euler)
+
+        # save action
         replay_buffer['action'].append(action)
+        replay_buffer['action_matrix'].append(action_matrix)
 
-        alpha += deltas[action][0]
-        beta += deltas[action][1]
-        gamma += deltas[action][2]
+        # update state
+        state = np.matmul(action_matrix, state)
+        replay_buffer['next_state_matrix'].append(state)
 
-        # state = render_teapot(alpha, beta, gamma)
-        parallel.add((alpha, beta, gamma, i + 1))
-        # replay_buffer['next_obs'].append(state)
-        replay_buffer['next_state_ids'].append((alpha, beta, gamma))
+        # render observation
+        parallel.add((state, i + 1))
 
         #    if i % 10 == 0:
         print("iter " + str(i))
@@ -129,6 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
+    parser.add_argument('--blacklist-paths', nargs="+", default=None)
 
     parsed = parser.parse_args()
     main(parsed)

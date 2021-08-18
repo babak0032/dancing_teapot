@@ -4,17 +4,9 @@ import utils
 import numpy as np
 from PIL import Image
 from math import *
-from scipy.spatial.transform import Rotation as R
 
 
-def theta_to_z(theta):
-
-    # this is ZYX-intrinsic or 3-2-1 intrinsic
-    # https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Rotation_matrix_%E2%86%94_Euler_angles
-    return R.from_euler('xyz', theta, degrees=False).as_matrix()
-
-
-def render_teapot(alpha, beta, gamma):
+def render_teapot(rot):
     FN = "teapot_small.obj"
     #FN = "entire_shape.obj"
     xs, ys = 128,128    # image size
@@ -57,8 +49,6 @@ def render_teapot(alpha, beta, gamma):
     N = np.array(N, dtype=np.float32)
 
     #print(f"{len(V)} vertices, {len(N)} normals, {len(F)} faces")
-
-    rot = theta_to_z([alpha, beta, gamma])
     # print(rot)
     # print(V.shape, N.shape)
     TV = np.matmul(V, rot.T)
