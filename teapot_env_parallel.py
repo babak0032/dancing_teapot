@@ -92,6 +92,8 @@ def check_disjoint(state, action, blacklist_states, blacklist_actions):
 
 def main(args):
 
+    # use this to ensure state, action pairs in train/valid/test sets are disjoint
+    blacklist_indices = []
     blacklist_states, blacklist_actions = None, None
     if args.blacklist_paths is not None:
         blacklist_states, blacklist_actions = prepare_blacklist(args.blacklist_paths)
@@ -100,10 +102,10 @@ def main(args):
 
     np.random.seed(args.seed)
 
-    replay_buffer = {'obs': [None for _ in range(args.num_timesteps)],
+    replay_buffer = {'obs': None,
                      'action': [],
                      'action_matrix': [],
-                     'next_obs': [None for _ in range(args.num_timesteps)],
+                     'next_obs': None,
                      'state_matrix': [],
                      'next_state_matrix': []}
 
@@ -115,7 +117,10 @@ def main(args):
     # state = render_teapot(alpha, beta)
     parallel.add((state, 0))
 
-    for i in range(args.num_timesteps):
+    # create states for workers to render
+    i = 0
+    limit = args.num_timesteps
+    while i < limit:
 
         # save state matrix
         replay_buffer['state_matrix'].append(state)
@@ -124,6 +129,12 @@ def main(args):
         action = np.random.randint(6)
         deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
                   (0, 0, rad_step), (0, 0, -rad_step)]
+
+        # check if state, action pair in blacklist
+        if blacklist_states is not None and not check_disjoint(state, action, blacklist_states, blacklist_actions):
+            blacklist_indices.append(i)
+            # generate one more transition to replace this one
+            limit += 1
 
         # turn euler angle delta into a rotation matrix
         action_euler = list(deltas[action])
@@ -142,8 +153,16 @@ def main(args):
 
         #    if i % 10 == 0:
         print("iter " + str(i))
+        i += 1
 
+    # render all images
+    # we will render even images in the blacklist
+    # because the next state in transition i is used as the current state in transition i + 1
     parallel.run_threads()
+
+    # we won't be getting images in order
+    replay_buffer['obs'] = [None for _ in range(limit)]
+    replay_buffer['next_obs'] = [None for _ in range(limit)]
 
     for _ in range(args.num_timesteps + 1):
 
@@ -157,7 +176,19 @@ def main(args):
 
     parallel.stop()
 
+    # remove blacklisted transitions
+    if len(blacklist_indices) > 0:
+        for i in reversed(blacklist_indices):
+            del replay_buffer['obs'][i]
+            del replay_buffer['action'][i]
+            del replay_buffer['action_matrix'][i]
+            del replay_buffer['next_obs'][i]
+            del replay_buffer['state_matrix'][i]
+            del replay_buffer['next_state_matrix'][i]
+
     # Save replay buffer to disk.
+    assert len(replay_buffer['obs']) == len(replay_buffer['action']) == len(replay_buffer['action_matrix']) == \
+        len(replay_buffer['next_obs']) == len(replay_buffer['state_matrix']) == len(replay_buffer['next_state_matrix'])
     utils.save_list_dict_h5py(replay_buffer, args.fname)
 
 
