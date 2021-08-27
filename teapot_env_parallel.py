@@ -198,7 +198,7 @@ def main(args):
     # Save replay buffer to disk.
     assert len(replay_buffer['obs']) == len(replay_buffer['action']) == len(replay_buffer['action_matrix']) == \
         len(replay_buffer['next_obs']) == len(replay_buffer['state_matrix']) == len(replay_buffer['next_state_matrix'])
-    utils.save_list_dict_h5py(replay_buffer, args.fname)
+    utils.save_single_ep_h5py(replay_buffer, args.fname)
 
 
 if __name__ == "__main__":

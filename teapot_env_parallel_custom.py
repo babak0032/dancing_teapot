@@ -46,6 +46,7 @@ def main(args):
             # turn euler angle delta into a rotation matrix
             action_euler = list(deltas[action])
             action_matrix = euler_angles_to_rot_matrix(action_euler)
+            state = np.matmul(action_matrix, state)
 
             # save action
             replay_buffer[-1]['action'].append(action)
@@ -84,7 +85,7 @@ def main(args):
     parallel.stop()
 
     # Save replay buffer to disk.
-    utils.save_list_dict_h5py(replay_buffer, args.fname)
+    utils.save_many_ep_h5py(replay_buffer, args.fname)
 
 
 if __name__ == "__main__":

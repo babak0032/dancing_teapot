@@ -41,7 +41,7 @@ def load_dict_h5py(fname):
     return array_dict
 
 
-def save_list_dict_h5py(array_dict, fname):
+def save_single_ep_h5py(array_dict, fname):
     """Save list of dictionaries containing numpy arrays to h5py file."""
 
     # Ensure directory exists
@@ -53,6 +53,21 @@ def save_list_dict_h5py(array_dict, fname):
         grp = hf.create_group("data")
         for key in array_dict.keys():
             grp.create_dataset(key, data=array_dict[key])
+
+
+def save_many_ep_h5py(array_dict, fname):
+    """Save list of dictionaries containing numpy arrays to h5py file."""
+
+    # Ensure directory exists
+    directory = os.path.dirname(fname)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
+    with h5py.File(fname, 'w') as hf:
+        for i in range(len(array_dict)):
+            grp = hf.create_group(str(i))
+            for key in array_dict[i].keys():
+                grp.create_dataset(key, data=array_dict[i][key])
 
 
 def load_list_dict_h5py(fname):
