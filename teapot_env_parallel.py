@@ -37,6 +37,8 @@ class Parallel:
 
     def stop(self):
 
+        assert self.result_queue.empty()
+
         for _ in range(self.num_jobs):
             self.task_queue.put(None)
 
@@ -90,6 +92,18 @@ def check_disjoint(state, action, blacklist_states, blacklist_actions):
     return not match
 
 
+def init_episode_dict():
+
+    return {
+        'obs': None,
+        'action': [],
+        'action_matrix': [],
+        'next_obs': None,
+        'state_matrix': [],
+        'next_state_matrix': []
+    }
+
+
 def main(args):
 
     # use this to ensure state, action pairs in train/valid/test sets are disjoint
@@ -102,12 +116,7 @@ def main(args):
 
     np.random.seed(args.seed)
 
-    replay_buffer = {'obs': None,
-                     'action': [],
-                     'action_matrix': [],
-                     'next_obs': None,
-                     'state_matrix': [],
-                     'next_state_matrix': []}
+    replay_buffer = init_episode_dict()
 
     # [0., 0., 0.] would result in the teapot pointing down
     start_euler = [np.pi, 0., 0.]
