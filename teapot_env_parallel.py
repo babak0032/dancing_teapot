@@ -136,8 +136,8 @@ def main(args):
 
         # move in one of six directions by 1 / 30 of a circle
         action = np.random.randint(6)
-        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
-                  (0, 0, rad_step), (0, 0, -rad_step)]
+        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (0, 0, rad_step),
+                  (-rad_step, 0, 0), (0, -rad_step, 0), (0, 0, -rad_step)]
 
         # check if state, action pair in blacklist
         if blacklist_states is not None and not check_disjoint(state, action, blacklist_states, blacklist_actions):
