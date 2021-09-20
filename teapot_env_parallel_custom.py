@@ -21,8 +21,8 @@ def main(args):
 
     replay_buffer = []
     rad_step = 2 * np.pi / 30.0
-    deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
-              (0, 0, rad_step), (0, 0, -rad_step)]
+    deltas = [(rad_step, 0, 0), (0, rad_step, 0), (0, 0, rad_step),
+              (-rad_step, 0, 0), (0, -rad_step, 0), (0, 0, -rad_step)]
 
     # create states for workers to render
     for ep_idx in range(args.num_episodes):
