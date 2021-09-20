@@ -8,7 +8,6 @@ def init_episode_dict():
 
     return {
         'obs': None,
-        'action': [],
         'action_matrix': [],
         'state_matrix': []
     }
@@ -40,16 +39,23 @@ def main(args):
             # save state matrix
             replay_buffer[-1]['state_matrix'].append(state)
 
-            # move in one of six directions by 1 / 30 of a circle
-            action = np.random.randint(6)
+            if args.all_actions:
+                # move in one of six directions by 1 / 30 of a circle
+                action = np.random.randint(6)
 
-            # turn euler angle delta into a rotation matrix
-            action_euler = list(deltas[action])
+                # turn euler angle delta into a rotation matrix
+                action_euler = list(deltas[action])
+            else:
+                action_euler = [
+                    np.random.uniform(-np.pi, np.pi),
+                    np.random.uniform(-np.pi / 2, np.pi / 2),
+                    np.random.uniform(-np.pi, np.pi)
+                ]
+
             action_matrix = euler_angles_to_rot_matrix(action_euler)
             state = np.matmul(action_matrix, state)
 
             # save action
-            replay_buffer[-1]['action'].append(action)
             replay_buffer[-1]['action_matrix'].append(action_matrix)
 
             # render observation
@@ -100,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
+    parser.add_argument('--all_actions', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)

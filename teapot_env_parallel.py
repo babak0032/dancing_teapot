@@ -68,35 +68,10 @@ def euler_angles_to_rot_matrix(theta):
     return R.from_euler('xyz', theta, degrees=False).as_matrix()
 
 
-def prepare_blacklist(paths):
-
-    states = []
-    actions = []
-
-    for p in paths:
-        dset = utils.load_list_dict_h5py(p)
-        states.append(dset['state_matrix'])
-        actions.append(dset['action'])
-
-    states = np.concatenate(states, axis=0)
-    actions = np.concatenate(actions, axis=0)
-
-    return states, actions
-
-
-def check_disjoint(state, action, blacklist_states, blacklist_actions):
-
-    match_state = np.all(np.abs(blacklist_states - state[None]) < 1e-5, axis=(1, 2))
-    match_action = blacklist_actions == action
-    match = np.any(np.logical_and(match_state, match_action))
-    return not match
-
-
 def init_episode_dict():
 
     return {
         'obs': None,
-        'action': [],
         'action_matrix': [],
         'next_obs': None,
         'state_matrix': [],
@@ -105,12 +80,6 @@ def init_episode_dict():
 
 
 def main(args):
-
-    # use this to ensure state, action pairs in train/valid/test sets are disjoint
-    blacklist_indices = []
-    blacklist_states, blacklist_actions = None, None
-    if args.blacklist_paths is not None:
-        blacklist_states, blacklist_actions = prepare_blacklist(args.blacklist_paths)
 
     parallel = Parallel(args.num_jobs, worker_fc)
 
@@ -134,23 +103,24 @@ def main(args):
         # save state matrix
         replay_buffer['state_matrix'].append(state)
 
-        # move in one of six directions by 1 / 30 of a circle
-        action = np.random.randint(6)
-        deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
-                  (0, 0, rad_step), (0, 0, -rad_step)]
+        if args.all_actions:
+            # move in one of six directions by 1 / 30 of a circle
+            action = np.random.randint(6)
+            deltas = [(rad_step, 0, 0), (0, rad_step, 0), (-rad_step, 0, 0), (0, -rad_step, 0),
+                      (0, 0, rad_step), (0, 0, -rad_step)]
 
-        # check if state, action pair in blacklist
-        if blacklist_states is not None and not check_disjoint(state, action, blacklist_states, blacklist_actions):
-            blacklist_indices.append(i)
-            # generate one more transition to replace this one
-            limit += 1
+            # turn euler angle delta into a rotation matrix
+            action_euler = list(deltas[action])
+        else:
+            action_euler = [
+                np.random.uniform(-np.pi, np.pi),
+                np.random.uniform(-np.pi/2, np.pi/2),
+                np.random.uniform(-np.pi, np.pi)
+            ]
 
-        # turn euler angle delta into a rotation matrix
-        action_euler = list(deltas[action])
         action_matrix = euler_angles_to_rot_matrix(action_euler)
 
         # save action
-        replay_buffer['action'].append(action)
         replay_buffer['action_matrix'].append(action_matrix)
 
         # update state
@@ -165,7 +135,6 @@ def main(args):
         i += 1
 
     # render all images
-    # we will render even images in the blacklist
     # because the next state in transition i is used as the current state in transition i + 1
     parallel.run_threads()
 
@@ -185,19 +154,10 @@ def main(args):
 
     parallel.stop()
 
-    # remove blacklisted transitions
-    if len(blacklist_indices) > 0:
-        for i in reversed(blacklist_indices):
-            del replay_buffer['obs'][i]
-            del replay_buffer['action'][i]
-            del replay_buffer['action_matrix'][i]
-            del replay_buffer['next_obs'][i]
-            del replay_buffer['state_matrix'][i]
-            del replay_buffer['next_state_matrix'][i]
-
     # Save replay buffer to disk.
-    assert len(replay_buffer['obs']) == len(replay_buffer['action']) == len(replay_buffer['action_matrix']) == \
-        len(replay_buffer['next_obs']) == len(replay_buffer['state_matrix']) == len(replay_buffer['next_state_matrix'])
+    assert len(replay_buffer['obs']) == len(replay_buffer['action_matrix']) == \
+        len(replay_buffer['next_obs']) == len(replay_buffer['state_matrix']) == \
+        len(replay_buffer['next_state_matrix'])
     utils.save_single_ep_h5py(replay_buffer, args.fname)
 
 
@@ -212,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
-    parser.add_argument('--blacklist-paths', nargs="+", default=None)
+    parser.add_argument('--all_actions', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
