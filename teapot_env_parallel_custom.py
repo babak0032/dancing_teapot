@@ -40,17 +40,17 @@ def main(args):
             replay_buffer[-1]['state_matrix'].append(state)
 
             if args.all_actions:
-                # move in one of six directions by 1 / 30 of a circle
-                action = np.random.randint(6)
-
-                # turn euler angle delta into a rotation matrix
-                action_euler = list(deltas[action])
-            else:
                 action_euler = [
                     np.random.uniform(-np.pi, np.pi),
                     np.random.uniform(-np.pi / 2, np.pi / 2),
                     np.random.uniform(-np.pi, np.pi)
                 ]
+            else:
+                # move in one of six directions by 1 / 30 of a circle
+                action = np.random.randint(6)
+
+                # turn euler angle delta into a rotation matrix
+                action_euler = list(deltas[action])
 
             action_matrix = euler_angles_to_rot_matrix(action_euler)
             state = np.matmul(action_matrix, state)
