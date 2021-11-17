@@ -1,6 +1,6 @@
 import argparse
 import subprocess
-import utils
+import dancing_teapot.utils
 import numpy as np
 from PIL import Image
 from math import *

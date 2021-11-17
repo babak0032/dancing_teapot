@@ -3,8 +3,8 @@ import numpy as np
 from multiprocessing import Queue, JoinableQueue, Process
 from PIL import Image
 from scipy.spatial.transform import Rotation as R
-from teapot_env import render_teapot
-import utils
+from dancing_teapot.teapot_env import render_teapot
+import dancing_teapot.utils as utils
 
 
 class Parallel:
