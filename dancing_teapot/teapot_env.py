@@ -1,13 +1,16 @@
 import argparse
 import subprocess
-import dancing_teapot.utils
 import numpy as np
 from PIL import Image
 from math import *
 
+import os 
+import dancing_teapot
+import dancing_teapot.utils
 
 def render_teapot(rot):
-    FN = "teapot_small.obj"
+    FN = os.path.join(os.path.dirname(dancing_teapot.__file__), 'teapot_small.obj')
+    # FN = "teapot_small.obj"
     #FN = "entire_shape.obj"
     xs, ys = 128,128    # image size
     xs_res, ys_res = 64, 64
