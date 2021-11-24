@@ -113,6 +113,10 @@ def main(args):
             v = np.array([np.cos(2*np.pi*u2)*np.sqrt(u3), np.sin(2*np.pi*u2)*np.sqrt(u3), np.sqrt(1-u3)])
             H = np.eye(3) - 2*np.outer(v, v.T)
             action_matrix = -np.matmul(H, R)
+        elif args.uniform_rand_axis:
+            action_euler = np.zeros(3)
+            action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
         elif args.all_actions:
             action_euler = [
                 np.random.uniform(-np.pi, np.pi),
@@ -184,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
     parser.add_argument('--uniform', default=False, action='store_true')
+    parser.add_argument('--uniform-rand-axis', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
