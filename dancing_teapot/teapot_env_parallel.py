@@ -102,13 +102,28 @@ def main(args):
 
         # save state matrix
         replay_buffer['state_matrix'].append(state)
-
-        if args.all_actions:
+        
+        if args.uniform:
+            u1 = np.random.uniform(0., 1.)
+            R = np.array([[np.cos(2*np.pi*u1), np.sin(2*np.pi*u1), 0],
+                        [-np.sin(2*np.pi*u1), np.cos(2*np.pi*u1), 0],
+                        [0, 0, 1]])
+            u2 = np.random.uniform(0., 1.)
+            u3 = np.random.uniform(0., 1.)
+            v = np.array([np.cos(2*np.pi*u2)*np.sqrt(u3), np.sin(2*np.pi*u2)*np.sqrt(u3), np.sqrt(1-u3)])
+            H = np.eye(3) - 2*np.outer(v, v.T)
+            action_matrix = -np.matmul(H, R)
+        elif args.uniform_rand_axis:
+            action_euler = np.zeros(3)
+            action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
+        elif args.all_actions:
             action_euler = [
                 np.random.uniform(-np.pi, np.pi),
                 np.random.uniform(-np.pi/2, np.pi/2),
                 np.random.uniform(-np.pi, np.pi)
             ]
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
         else:
             # move in one of six directions by 1 / 30 of a circle
             action = np.random.randint(6)
@@ -117,8 +132,7 @@ def main(args):
 
             # turn euler angle delta into a rotation matrix
             action_euler = list(deltas[action])
-
-        action_matrix = euler_angles_to_rot_matrix(action_euler)
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
 
         # save action
         replay_buffer['action_matrix'].append(action_matrix)
@@ -173,6 +187,8 @@ if __name__ == "__main__":
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
+    parser.add_argument('--uniform', default=False, action='store_true')
+    parser.add_argument('--uniform-rand-axis', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
