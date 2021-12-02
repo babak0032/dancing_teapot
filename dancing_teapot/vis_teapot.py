@@ -1,7 +1,14 @@
 import matplotlib.pyplot as plt
 import utils
+import argparse
 
-data_path = "data/teapot.h5"
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--data-path', default='data/teapot.h5',
+                help='name for log file and model file')
+args = parser.parse_args()
+
+data_path = args.data_path
 replay_buffer = utils.load_list_dict_h5py(data_path)
 
 for i in range(len(replay_buffer['obs'])):
