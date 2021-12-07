@@ -196,7 +196,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
     parser.add_argument('--uniform', default=False, action='store_true')
-    parser.add_argument('--uniform-rand-axis', default=False, action='store_true')
+    parser.add_argument('--uniform-rand-one-axis', default=False, action='store_true')
+    parser.add_argument('--uniform-rand-two-axis', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
