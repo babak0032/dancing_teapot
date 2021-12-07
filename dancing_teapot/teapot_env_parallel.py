@@ -113,9 +113,17 @@ def main(args):
             v = np.array([np.cos(2*np.pi*u2)*np.sqrt(u3), np.sin(2*np.pi*u2)*np.sqrt(u3), np.sqrt(1-u3)])
             H = np.eye(3) - 2*np.outer(v, v.T)
             action_matrix = -np.matmul(H, R)
-        elif args.uniform_rand_axis:
-            action_euler = np.zeros(3)
+        elif args.uniform_rand_one_axis:
+            action_euler = np.array([np.random.uniform(-np.pi, np.pi)/10.,
+                                     np.random.uniform(-np.pi, np.pi)/10.,
+                                     np.random.uniform(-np.pi, np.pi)/10.])
             action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
+        elif args.uniform_rand_two_axis:
+            action_euler = np.array([np.random.uniform(-np.pi, np.pi),
+                                     np.random.uniform(-np.pi, np.pi),
+                                     np.random.uniform(-np.pi, np.pi)])
+            action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)/10.
             action_matrix = euler_angles_to_rot_matrix(action_euler)
         elif args.all_actions:
             action_euler = [
