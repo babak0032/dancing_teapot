@@ -79,7 +79,7 @@ def main(args):
                     action_matrix = euler_angles_to_rot_matrix(action_euler)
                     tmp_state = np.matmul(action_matrix, state)
                     replay_buffer[-1]['state_matrix'].append(tmp_state)
-                    parallel.add((tmp_state, (ep_idx, args.num_steps + neg_sample_idx + 1)))
+                    parallel.add((tmp_state, (ep_idx, args.num_steps + circle_idx * 6 + neg_sample_idx + 1)))
 
         else:
 
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
-    parser.add_argument('--very-hard-hits', default=False, action='store_true')
+    parser.add_argument('--very_hard_hits', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
