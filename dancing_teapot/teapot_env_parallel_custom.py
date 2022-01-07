@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
-from teapot_env_parallel import Parallel, worker_fc, euler_angles_to_rot_matrix
-import utils
+from dancing_teapot.teapot_env_parallel import Parallel, worker_fc, euler_angles_to_rot_matrix
+from dancing_teapot import utils
 
 
 def init_episode_dict():
@@ -13,6 +13,12 @@ def init_episode_dict():
     }
 
 
+def get_deltas(rad_step):
+
+    return [(rad_step, 0, 0), (0, rad_step, 0), (0, 0, rad_step),
+            (-rad_step, 0, 0), (0, -rad_step, 0), (0, 0, -rad_step)]
+
+
 def main(args):
 
     parallel = Parallel(args.num_jobs, worker_fc)
@@ -21,17 +27,14 @@ def main(args):
 
     replay_buffer = []
     rad_step = 2 * np.pi / 30.0
-    deltas = [(rad_step, 0, 0), (0, rad_step, 0), (0, 0, rad_step),
-              (-rad_step, 0, 0), (0, -rad_step, 0), (0, 0, -rad_step)]
+    deltas = get_deltas(rad_step)
 
     # create states for workers to render
     for ep_idx in range(args.num_episodes):
 
         replay_buffer.append(init_episode_dict())
 
-        state = euler_angles_to_rot_matrix(
-            [np.random.uniform(-np.pi, np.pi), np.random.uniform(-np.pi/2, np.pi/2), np.random.uniform(-np.pi, np.pi)]
-        )
+        state = utils.sample_uniform_rotation_matrix()
         parallel.add((state, (ep_idx, 0)))
 
         for step_idx in range(args.num_steps):
@@ -40,19 +43,15 @@ def main(args):
             replay_buffer[-1]['state_matrix'].append(state)
 
             if args.all_actions:
-                action_euler = [
-                    np.random.uniform(-np.pi, np.pi),
-                    np.random.uniform(-np.pi / 2, np.pi / 2),
-                    np.random.uniform(-np.pi, np.pi)
-                ]
+                action_matrix = utils.sample_uniform_rotation_matrix()
             else:
                 # move in one of six directions by 1 / 30 of a circle
                 action = np.random.randint(6)
 
                 # turn euler angle delta into a rotation matrix
                 action_euler = list(deltas[action])
+                action_matrix = euler_angles_to_rot_matrix(action_euler)
 
-            action_matrix = euler_angles_to_rot_matrix(action_euler)
             state = np.matmul(action_matrix, state)
 
             # save action
@@ -63,13 +62,34 @@ def main(args):
 
         replay_buffer[-1]['state_matrix'].append(state)
 
-        for neg_sample_idx in range(6):
+        if args.very_hard_hits:
 
-            action_euler = list(deltas[neg_sample_idx])
-            action_matrix = euler_angles_to_rot_matrix(action_euler)
-            tmp_state = np.matmul(action_matrix, state)
-            replay_buffer[-1]['state_matrix'].append(tmp_state)
-            parallel.add((tmp_state, (ep_idx, args.num_steps + neg_sample_idx + 1)))
+            for circle_idx in range(3):
+
+                if circle_idx == 0:
+                    tmp_deltas = get_deltas(2 * np.pi / 30.)
+                elif circle_idx == 1:
+                    tmp_deltas = get_deltas(2 * np.pi / 8.)
+                else:
+                    tmp_deltas = get_deltas(2 * np.pi / 3.)
+
+                for neg_sample_idx in range(6):
+
+                    action_euler = list(tmp_deltas[neg_sample_idx])
+                    action_matrix = euler_angles_to_rot_matrix(action_euler)
+                    tmp_state = np.matmul(action_matrix, state)
+                    replay_buffer[-1]['state_matrix'].append(tmp_state)
+                    parallel.add((tmp_state, (ep_idx, args.num_steps + neg_sample_idx + 1)))
+
+        else:
+
+            for neg_sample_idx in range(6):
+
+                action_euler = list(deltas[neg_sample_idx])
+                action_matrix = euler_angles_to_rot_matrix(action_euler)
+                tmp_state = np.matmul(action_matrix, state)
+                replay_buffer[-1]['state_matrix'].append(tmp_state)
+                parallel.add((tmp_state, (ep_idx, args.num_steps + neg_sample_idx + 1)))
 
     # render all images
     # we will render even images in the blacklist
@@ -77,13 +97,21 @@ def main(args):
     parallel.run_threads()
 
     # we won't be getting images in order
+    tmp_num_steps = args.num_steps + 1
+    if args.very_hard_hits:
+        tmp_num_steps += 3 * 6
+    else:
+        tmp_num_steps += 6
+
     for ep_idx in range(args.num_episodes):
 
-        replay_buffer[ep_idx]['obs'] = [None for _ in range(args.num_steps + 7)]
+        replay_buffer[ep_idx]['obs'] = [None for _ in range(tmp_num_steps)]
 
     for ep_idx in range(args.num_episodes):
 
-        for step_idx in range(args.num_steps + 7):
+        print(ep_idx)
+
+        for step_idx in range(tmp_num_steps):
 
             image, index = parallel.get()
             replay_buffer[index[0]]['obs'][index[1]] = image
@@ -107,6 +135,7 @@ if __name__ == "__main__":
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
+    parser.add_argument('--very-hard-hits', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)

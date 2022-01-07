@@ -104,15 +104,7 @@ def main(args):
         replay_buffer['state_matrix'].append(state)
         
         if args.uniform:
-            u1 = np.random.uniform(0., 1.)
-            R = np.array([[np.cos(2*np.pi*u1), np.sin(2*np.pi*u1), 0],
-                        [-np.sin(2*np.pi*u1), np.cos(2*np.pi*u1), 0],
-                        [0, 0, 1]])
-            u2 = np.random.uniform(0., 1.)
-            u3 = np.random.uniform(0., 1.)
-            v = np.array([np.cos(2*np.pi*u2)*np.sqrt(u3), np.sin(2*np.pi*u2)*np.sqrt(u3), np.sqrt(1-u3)])
-            H = np.eye(3) - 2*np.outer(v, v.T)
-            action_matrix = -np.matmul(H, R)
+            action_matrix = utils.sample_uniform_rotation_matrix()
         elif args.uniform_rand_one_axis:
             action_euler = np.array([np.random.uniform(-np.pi, np.pi)/10.,
                                      np.random.uniform(-np.pi, np.pi)/10.,
