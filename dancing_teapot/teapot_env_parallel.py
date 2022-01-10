@@ -102,7 +102,7 @@ def main(args):
 
         # save state matrix
         replay_buffer['state_matrix'].append(state)
-        
+
         if args.uniform:
             u1 = np.random.uniform(0., 1.)
             R = np.array([[np.cos(2*np.pi*u1), np.sin(2*np.pi*u1), 0],
@@ -113,18 +113,28 @@ def main(args):
             v = np.array([np.cos(2*np.pi*u2)*np.sqrt(u3), np.sin(2*np.pi*u2)*np.sqrt(u3), np.sqrt(1-u3)])
             H = np.eye(3) - 2*np.outer(v, v.T)
             action_matrix = -np.matmul(H, R)
+        elif args.uniform_2d:
+            # move in only the 1st 2d
+            action_euler = [
+                np.random.uniform(-np.pi, np.pi),
+                np.random.uniform(-np.pi/2, np.pi/2),
+                0.0
+            ]
+            action_matrix = euler_angles_to_rot_matrix(action_euler)
         elif args.uniform_rand_one_axis:
             action_euler = np.array([np.random.uniform(-np.pi, np.pi)/10.,
                                      np.random.uniform(-np.pi, np.pi)/10.,
                                      np.random.uniform(-np.pi, np.pi)/10.])
             action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)
             action_matrix = euler_angles_to_rot_matrix(action_euler)
+
         elif args.uniform_rand_two_axis:
             action_euler = np.array([np.random.uniform(-np.pi, np.pi),
                                      np.random.uniform(-np.pi, np.pi),
                                      np.random.uniform(-np.pi, np.pi)])
             action_euler[np.random.randint(0, 2)] = np.random.uniform(-np.pi, np.pi)/10.
             action_matrix = euler_angles_to_rot_matrix(action_euler)
+
         elif args.all_actions:
             action_euler = [
                 np.random.uniform(-np.pi, np.pi),
@@ -141,6 +151,7 @@ def main(args):
             # turn euler angle delta into a rotation matrix
             action_euler = list(deltas[action])
             action_matrix = euler_angles_to_rot_matrix(action_euler)
+
 
         # save action
         replay_buffer['action_matrix'].append(action_matrix)
@@ -198,6 +209,7 @@ if __name__ == "__main__":
     parser.add_argument('--uniform', default=False, action='store_true')
     parser.add_argument('--uniform-rand-one-axis', default=False, action='store_true')
     parser.add_argument('--uniform-rand-two-axis', default=False, action='store_true')
+    parser.add_argument('--uniform-2d', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
