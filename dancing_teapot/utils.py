@@ -365,8 +365,24 @@ class PathDatasetStateIds(PathDataset):
 
         return observations, actions, state_ids
 
+
 def css_to_ssc(image):
     return image.transpose((1, 2, 0))
 
+
 def to_np(x):
     return x.detach().cpu().numpy()
+
+
+def sample_uniform_rotation_matrix():
+
+    u1 = np.random.uniform(0., 1.)
+    R = np.array([[np.cos(2 * np.pi * u1), np.sin(2 * np.pi * u1), 0],
+                  [-np.sin(2 * np.pi * u1), np.cos(2 * np.pi * u1), 0],
+                  [0, 0, 1]])
+    u2 = np.random.uniform(0., 1.)
+    u3 = np.random.uniform(0., 1.)
+    v = np.array([np.cos(2 * np.pi * u2) * np.sqrt(u3), np.sin(2 * np.pi * u2) * np.sqrt(u3), np.sqrt(1 - u3)])
+    H = np.eye(3) - 2 * np.outer(v, v.T)
+    rotation_matrix = -np.matmul(H, R)
+    return rotation_matrix
