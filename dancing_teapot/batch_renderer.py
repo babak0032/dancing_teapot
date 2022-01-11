@@ -5,13 +5,13 @@ import numpy as np
 def batch_renderer(seed, num_jobs, states):
     parallel = Parallel(num_jobs, worker_fc)
     np.random.seed(seed)
-    parallel.add((states[0], 0))
+    # parallel.add((states[0], 0))
     i = 0
     limit = states.shape[0]
 
     while i < limit:
-        parallel.add((states[i], i + 1))
-        print("iter " + str(i))
+        parallel.add((states[i], i))
+        # print("iter " + str(i))
         i += 1
 
     parallel.run_threads()
