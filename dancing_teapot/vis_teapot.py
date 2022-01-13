@@ -21,7 +21,7 @@ def main(args):
 
         plt.pause(3.0)
 
-if __name__ is "__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('fname', type=str)

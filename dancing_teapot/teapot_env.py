@@ -8,8 +8,9 @@ import os
 import dancing_teapot
 import dancing_teapot.utils
 
-def render_teapot(rot):
-    FN = os.path.join(os.path.dirname(dancing_teapot.__file__), 'teapot_small.obj')
+def render_teapot(rot, obj_file=None):
+    obj_file = "teapot_small.obj" if obj_file is None else obj_file
+    FN = os.path.join(os.path.dirname(dancing_teapot.__file__), obj_file)
     # FN = "teapot_small.obj"
     #FN = "entire_shape.obj"
     xs, ys = 128,128    # image size

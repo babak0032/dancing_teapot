@@ -55,8 +55,8 @@ def worker_fc(task_queue, result_queue):
         if item is None:
             break
 
-        rot, index = item
-        image = render_teapot(rot)
+        rot, index, obj_file = item
+        image = render_teapot(rot, obj_file=obj_file)
 
         result_queue.put((image, index))
 
@@ -93,7 +93,7 @@ def main(args):
     rad_step = 2 * np.pi / 30.0
 
     # state = render_teapot(alpha, beta)
-    parallel.add((state, 0))
+    parallel.add((state, 0, args.obj_file))
 
     # create states for workers to render
     i = 0
@@ -145,7 +145,7 @@ def main(args):
         replay_buffer['next_state_matrix'].append(state)
 
         # render observation
-        parallel.add((state, i + 1))
+        parallel.add((state, i + 1, args.obj_file))
 
         #    if i % 10 == 0:
         print("iter " + str(i))
@@ -186,6 +186,7 @@ if __name__ == "__main__":
                         help='Total number of episodes to simulate.')
     parser.add_argument('--fname', type=str, default='data/teapot.h5',
                         help='Save path for replay buffer.')
+    parser.add_argument('--obj_file', type=str, default='teapot_small.obj')
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
