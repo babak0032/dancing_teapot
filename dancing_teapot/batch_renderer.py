@@ -2,7 +2,7 @@ from dancing_teapot.teapot_env_parallel import Parallel, worker_fc, euler_angles
 import numpy as np
 
 
-def batch_renderer(seed, num_jobs, states):
+def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
     parallel = Parallel(num_jobs, worker_fc)
     np.random.seed(seed)
     # parallel.add((states[0], 0))
@@ -10,7 +10,7 @@ def batch_renderer(seed, num_jobs, states):
     limit = states.shape[0]
 
     while i < limit:
-        parallel.add((states[i], i))
+        parallel.add((states[i], i, obj_file))
         # print("iter " + str(i))
         i += 1
 
@@ -19,6 +19,7 @@ def batch_renderer(seed, num_jobs, states):
 
     for _ in range(limit):
         image, index = parallel.get()
+
         images[index] = image
 
     parallel.stop()
