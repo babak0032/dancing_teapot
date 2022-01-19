@@ -62,7 +62,7 @@ def main(args):
         image, index = parallel.get()
         k = index % (args.K)
         i = int((index - k) / args.K)
-        replay_buffer['obs_%d' % (k+1)][i] = image / 255.
+        replay_buffer['obs_%d' % (k+1)][i] = image
 
     parallel.stop()
 
@@ -80,8 +80,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
-    parser.add_argument('--min-step-size', default=2 * np.pi / 4, type=float)
-    parser.add_argument('--max-step-size', default=0, type=float)
+    parser.add_argument('--min-step-size', default=0, type=float)
+    parser.add_argument('--max-step-size', default=2 * np.pi / 4, type=float)
     parser.add_argument('--K', required=True, type=int, help='length of sequence')
     parsed = parser.parse_args()
     main(parsed)
