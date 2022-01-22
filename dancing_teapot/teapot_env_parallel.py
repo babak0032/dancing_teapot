@@ -141,7 +141,11 @@ def main(args):
         replay_buffer['action_matrix'].append(action_matrix)
 
         # update state
-        state = np.matmul(action_matrix, state)
+        if args.ego_centric:
+            state = np.matmul(state, action_matrix)
+        else:
+            state = np.matmul(action_matrix, state)
+
         replay_buffer['next_state_matrix'].append(state)
 
         # render observation
@@ -195,6 +199,7 @@ if __name__ == "__main__":
     parser.add_argument('--uniform-rand-one-axis', default=False, action='store_true')
     parser.add_argument('--uniform-rand-two-axis', default=False, action='store_true')
     parser.add_argument('--uniform-2d', default=False, action='store_true')
+    parser.add_argument('--ego-centric', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)

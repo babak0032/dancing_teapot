@@ -52,7 +52,10 @@ def main(args):
                 action_euler = list(deltas[action])
                 action_matrix = euler_angles_to_rot_matrix(action_euler)
 
-            state = np.matmul(action_matrix, state)
+            if args.ego_centric:
+                state = np.matmul(state, action_matrix)
+            else:
+                state = np.matmul(action_matrix, state)
 
             # save action
             replay_buffer[-1]['action_matrix'].append(action_matrix)
@@ -77,7 +80,12 @@ def main(args):
 
                     action_euler = list(tmp_deltas[neg_sample_idx])
                     action_matrix = euler_angles_to_rot_matrix(action_euler)
-                    tmp_state = np.matmul(action_matrix, state)
+
+                    if args.ego_centric:
+                        tmp_state = np.matmul(state, action_matrix)
+                    else:
+                        tmp_state = np.matmul(action_matrix, state)
+
                     replay_buffer[-1]['state_matrix'].append(tmp_state)
                     parallel.add((tmp_state, (ep_idx, args.num_steps + circle_idx * 6 + neg_sample_idx + 1)))
 
@@ -87,7 +95,12 @@ def main(args):
 
                 action_euler = list(deltas[neg_sample_idx])
                 action_matrix = euler_angles_to_rot_matrix(action_euler)
-                tmp_state = np.matmul(action_matrix, state)
+
+                if args.ego_centric:
+                    tmp_state = np.matmul(state, action_matrix)
+                else:
+                    tmp_state = np.matmul(action_matrix, state)
+
                 replay_buffer[-1]['state_matrix'].append(tmp_state)
                 parallel.add((tmp_state, (ep_idx, args.num_steps + neg_sample_idx + 1)))
 
@@ -136,6 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--all_actions', default=False, action='store_true')
     parser.add_argument('--very_hard_hits', default=False, action='store_true')
+    parser.add_argument('--ego-centric', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
