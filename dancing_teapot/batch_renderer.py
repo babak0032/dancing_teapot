@@ -1,5 +1,7 @@
 from dancing_teapot.teapot_env_parallel import Parallel, worker_fc, euler_angles_to_rot_matrix
+from tqdm.auto import tqdm
 import numpy as np
+
 
 
 def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
@@ -17,7 +19,7 @@ def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
     parallel.run_threads()
     images = [None for _ in range(limit)]
 
-    for _ in range(limit):
+    for _ in tqdm(range(limit)):
         image, index = parallel.get()
 
         images[index] = image

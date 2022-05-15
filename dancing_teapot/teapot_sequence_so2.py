@@ -8,6 +8,9 @@ from dancing_teapot.teapot_env_parallel import Parallel, worker_fc
 from dancing_teapot.lie_tools import rodrigues, sample_matrix_threshold
 import dancing_teapot.utils as utils
 from tqdm.auto import tqdm
+import torch.nn.functional as F
+import torch
+
 
 
 # def euler_angles_to_rot_matrix(theta):
@@ -19,53 +22,62 @@ from tqdm.auto import tqdm
 def init_episode_dict(K):
     d = {'action_matrix': []}
     for k in range(1, K+1):
-        d['obs_%d' % k] = None
+        d['obs_%d' % k] = []
         d['state_matrix_%d' % k] = []
+        d['state_%d' % k] = []
     return d
+
+
+def rotate(img, theta):
+    cos = torch.cos(theta)
+    sin = torch.sin(theta)
+    zero = torch.zeros_like(theta)
+    affine = torch.stack([cos, -sin, zero, sin, cos, zero], 1).view(-1, 2, 3)
+    grid = F.affine_grid(affine, img.shape)
+    return F.grid_sample(img, grid)[0]
 
 def main(args):
 
-    parallel = Parallel(args.num_jobs, worker_fc)
-
+    # parallel = Parallel(args.num_jobs, worker_fc)
+    # THETA0 = np.array([-np.pi, 0, 0])
+    # STATE0 = R.from_euler('xyz', THETA0, degrees=False).as_matrix()
+    X0 = torch.load(args.obj_file)
     np.random.seed(args.seed)
 
     replay_buffer = init_episode_dict(args.K)
-
+    print(replay_buffer)
     # create states for workers to render
     i = 0
     limit = args.num_timesteps
-    for _ in range(limit):
+    for _ in tqdm(range(limit)):
         # sample x0
-        state = utils.sample_uniform_rotation_matrix()
-        replay_buffer['state_matrix_1'].append(state)
+        theta = np.random.uniform(-np.pi, np.pi)
+        state = R.from_euler('xyz', np.array([theta,0,0]), degrees=False).as_matrix()
+        state_matrix = np.eye(3)
+        state_matrix[0:2,0:2] = np.array([[np.cos(theta), -np.sin(theta)],
+                                          [np.sin(theta),  np.cos(theta)]])
+        replay_buffer['state_matrix_1'].append(state_matrix)
+        replay_buffer['state_1'].append(theta)
+
+        obs_0 = rotate(X0[None,:], torch.FloatTensor([theta]))
+        replay_buffer['obs_%d' % 1].append(np.transpose(obs_0.numpy(),(1,2,0)))
+
         # sample g
-        action_matrix = sample_matrix_threshold(args.min_step_size, args.max_step_size)
+        action_theta = np.random.uniform(args.min_step_size, args.max_step_size)
+        action_theta = np.random.choice([-1,1]) * action_theta
+        action_matrix = R.from_euler('xyz', np.array([action_theta,0,0]), degrees=False).as_matrix()
         replay_buffer['action_matrix'].append(action_matrix)
+
         # render observation
-        parallel.add((state, i, args.obj_file))
-        i += 1
         for k in range(2, args.K+1):
             # update state
             state = np.matmul(action_matrix, state)
-            replay_buffer['state_matrix_%d' % k].append(state)
-            parallel.add((state, i, args.obj_file))
-            i += 1
-
-    # render all images
-    # because the next state in transition i is used as the current state in transition i + 1
-    parallel.run_threads()
-
-    # we won't be getting images in order
-    for k in range(1, args.K+1):
-        replay_buffer['obs_%d' % k] = [None for _ in range(limit)]
-
-    for _ in tqdm(range(args.num_timesteps * args.K)):
-        image, index = parallel.get()
-        k = index % (args.K)
-        i = int((index - k) / args.K)
-        replay_buffer['obs_%d' % (k+1)][i] = image
-
-    parallel.stop()
+            state_matrix = np.eye(3)
+            state_matrix[0:2,0:2] = np.array([[np.cos(theta), -np.sin(theta)],
+                                              [np.sin(theta),  np.cos(theta)]])
+            replay_buffer['state_matrix_%d' % k].append(state_matrix)
+            replay_buffer['state_%d' % k].append((k-1)*action_theta)
+            replay_buffer['obs_%d' % k].append(np.transpose(rotate(obs_0[None,:], (k-1)*torch.FloatTensor([action_theta])).numpy(),(1,2,0)))
 
     # print('hey')
     # Save replay buffer to disk.
@@ -83,7 +95,7 @@ if __name__ == "__main__":
                         help='Random seed.')
     parser.add_argument('--num_jobs', type=int, default=2)
     parser.add_argument('--min-step-size', default=0, type=float)
-    parser.add_argument('--max-step-size', default=2 * np.pi / 4, type=float)
+    parser.add_argument('--max-step-size', default=2 * np.pi / 5, type=float)
     parser.add_argument('--K', required=True, type=int, help='length of sequence')
     parsed = parser.parse_args()
     main(parsed)
