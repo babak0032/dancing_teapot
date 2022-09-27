@@ -10,6 +10,8 @@ from torch import nn
 
 import matplotlib.pyplot as plt
 
+from scipy.spatial.transform import Rotation as R
+
 EPS = 1e-17
 
 
@@ -365,24 +367,109 @@ class PathDatasetStateIds(PathDataset):
 
         return observations, actions, state_ids
 
-
 def css_to_ssc(image):
     return image.transpose((1, 2, 0))
-
 
 def to_np(x):
     return x.detach().cpu().numpy()
 
 
-def sample_uniform_rotation_matrix():
+# code from https://github.com/pimdh/lie-vae/tree/master/lie_vae
+def sample_matrix_threshold(group, step_size_min, step_size_max, aor=2):
+    step_size = np.random.uniform(step_size_min, step_size_max)
+    if group == 'so2':
+        action_theta = np.random.choice([-1,1]) * step_size
+        rot_vec = np.zeros(3)
+        rot_vec[aor] = action_theta
+        return R.from_euler('xyz', rot_vec, degrees=False).as_matrix()
+    elif group == 'so3':
+        matrix = rodrigues(torch.randn(1, 3) * step_size)
+        return matrix.squeeze().numpy()#.astype(np.float64)
+    else:
+        raise ValueError("group not implemented")
 
-    u1 = np.random.uniform(0., 1.)
-    R = np.array([[np.cos(2 * np.pi * u1), np.sin(2 * np.pi * u1), 0],
-                  [-np.sin(2 * np.pi * u1), np.cos(2 * np.pi * u1), 0],
-                  [0, 0, 1]])
-    u2 = np.random.uniform(0., 1.)
-    u3 = np.random.uniform(0., 1.)
-    v = np.array([np.cos(2 * np.pi * u2) * np.sqrt(u3), np.sin(2 * np.pi * u2) * np.sqrt(u3), np.sqrt(1 - u3)])
-    H = np.eye(3) - 2 * np.outer(v, v.T)
-    rotation_matrix = -np.matmul(H, R)
-    return rotation_matrix
+# code from https://github.com/pimdh/lie-vae/tree/master/lie_vae
+def rodrigues(v):
+    theta = v.norm(p=2, dim=-1, keepdim=True)
+    # normalize K
+    K = map_to_lie_algebra(v / theta)
+
+    I = torch.eye(3, device=v.device, dtype=v.dtype)
+    R = I + torch.sin(theta)[..., None]*K \
+        + (1. - torch.cos(theta))[..., None]*(K@K)
+    return R
+
+# code from https://github.com/pimdh/lie-vae/tree/master/lie_vae
+def map_to_lie_algebra(v):
+    """Map a point in R^N to the tangent space at the identity, i.e.
+    to the Lie Algebra
+    Arg:
+        v = vector in R^N, (..., 3) in our case
+    Return:
+        R = v converted to Lie Algebra element, (3,3) in our case"""
+
+    # make sure this is a sample from R^3
+    assert v.size()[-1] == 3
+
+    R_x = v.new_tensor([[ 0., 0., 0.],
+                        [ 0., 0.,-1.],
+                        [ 0., 1., 0.]])
+
+    R_y = v.new_tensor([[ 0., 0., 1.],
+                        [ 0., 0., 0.],
+                        [-1., 0., 0.]])
+
+    R_z = v.new_tensor([[ 0.,-1., 0.],
+                        [ 1., 0., 0.],
+                        [ 0., 0., 0.]])
+
+    R = R_x * v[..., 0, None, None] + \
+        R_y * v[..., 1, None, None] + \
+        R_z * v[..., 2, None, None]
+    return R
+
+def euler_angles_to_rot_matrix(theta):
+    # this is ZYX-intrinsic or 3-2-1 intrinsic
+    # https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Rotation_matrix_%E2%86%94_Euler_angles
+    return R.from_euler('xyz', theta, degrees=False).as_matrix()
+
+def rot_matrix_to_euler_angles(matrix):
+    return R.from_matrix(matrix).as_euler('xyz', degrees=False)
+
+def extract_so2_matrix_from_so3(x, aor):
+    indices = [0,1,2]
+    del indices[aor]
+    return x[:,indices,:][:,:,indices]
+
+def test_element_in_SOn(x, n):
+    assert (x.shape[-1] == n and x.shape[-2] == n)
+    if len(x.shape) == 3:
+        assert np.allclose(np.linalg.det(x), np.ones(x.shape[0]))
+        assert np.allclose(np.matmul(x.transpose((0,2,1)), x), np.repeat(np.eye(n)[None,:],x.shape[0], axis=0), atol=1e-6)
+    elif len(x.shape) == 2:
+        assert np.isclose(np.linalg.det(x), 1.)
+        assert np.allclose(np.matmul(x.T, x), np.eye(3))
+    else:
+        raise ValueError("shape mismtach")
+
+def sample_uniform_rotation_matrix(group, init_rot=None, aor=None):
+    if group == 'so2':
+        assert init_rot is not None, "must give a base point in so3"
+        assert aor is not None, "must select an axis of rotation"
+        theta = init_rot
+        theta[aor] = np.random.uniform(-np.pi, np.pi)
+        rotation_matrix = euler_angles_to_rot_matrix(theta)
+        return rotation_matrix, theta[aor]
+    elif group == 'so3':
+        u1 = np.random.uniform(0., 1.)
+        R = np.array([[np.cos(2 * np.pi * u1), np.sin(2 * np.pi * u1), 0],
+                      [-np.sin(2 * np.pi * u1), np.cos(2 * np.pi * u1), 0],
+                      [0, 0, 1]])
+        u2 = np.random.uniform(0., 1.)
+        u3 = np.random.uniform(0., 1.)
+        v = np.array([np.cos(2 * np.pi * u2) * np.sqrt(u3), np.sin(2 * np.pi * u2) * np.sqrt(u3), np.sqrt(1 - u3)])
+        H = np.eye(3) - 2 * np.outer(v, v.T)
+        rotation_matrix = -np.matmul(H, R)
+        return rotation_matrix, rot_matrix_to_euler_angles(rotation_matrix)
+    else:
+        raise ValueError("group sampling method not implemented")
