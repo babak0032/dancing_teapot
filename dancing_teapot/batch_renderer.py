@@ -3,7 +3,6 @@ from tqdm.auto import tqdm
 import numpy as np
 
 
-
 def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
     parallel = Parallel(num_jobs, worker_fc)
     np.random.seed(seed)
@@ -13,7 +12,6 @@ def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
 
     while i < limit:
         parallel.add((states[i], i, obj_file))
-        # print("iter " + str(i))
         i += 1
 
     parallel.run_threads()
@@ -21,7 +19,6 @@ def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
 
     for _ in tqdm(range(limit)):
         image, index = parallel.get()
-
         images[index] = image
 
     parallel.stop()
