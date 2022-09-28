@@ -1,4 +1,4 @@
-from dancing_teapot.teapot_env_parallel import Parallel, worker_fc, euler_angles_to_rot_matrix
+from dancing_teapot.teapot_sequence_env_parallel import Parallel, worker_fc
 from tqdm.auto import tqdm
 import numpy as np
 
