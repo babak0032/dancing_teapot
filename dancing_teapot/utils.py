@@ -445,7 +445,7 @@ def test_element_in_SOn(x, n):
     assert (x.shape[-1] == n and x.shape[-2] == n)
     if len(x.shape) == 3:
         assert np.allclose(np.linalg.det(x), np.ones(x.shape[0]))
-        assert np.allclose(np.matmul(x.transpose((0,2,1)), x), np.repeat(np.eye(n)[None,:],x.shape[0], axis=0), atol=1e-6)
+        assert np.allclose(np.matmul(x.transpose((0,2,1)), x), np.repeat(np.eye(n)[None,:],x.shape[0], axis=0), atol=1e-5)
     elif len(x.shape) == 2:
         assert np.isclose(np.linalg.det(x), 1.)
         assert np.allclose(np.matmul(x.T, x), np.eye(3))
