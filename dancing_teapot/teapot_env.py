@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from math import *
 
-import os 
+import os
 import dancing_teapot
 import dancing_teapot.utils
 
@@ -131,7 +131,7 @@ def render_teapot(rot, obj_file=None):
     im = im.resize((xs_res, ys_res), resample=Image.BICUBIC)
 
     pix = np.array(im.getdata()).reshape(im.size[0], im.size[1], 1)
-    return pix
+    return pix / 255.
 
 
 def crop_normalize(img, crop_ratio):
@@ -159,7 +159,7 @@ if __name__ == '__main__':
                      'next_obs': [],
                      'state_ids': [],
                      'next_state_ids': []}
-       
+
     alpha = np.pi
     beta = 0
     gamma = 0
@@ -192,4 +192,3 @@ if __name__ == '__main__':
 
     # Save replay buffer to disk.
     utils.save_list_dict_h5py(replay_buffer, args.fname)
-
