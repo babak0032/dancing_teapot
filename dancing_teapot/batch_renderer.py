@@ -3,10 +3,8 @@ from tqdm.auto import tqdm
 import numpy as np
 
 
-def batch_renderer(seed, num_jobs, states, obj_file='teapot_small.obj'):
+def batch_renderer(num_jobs, states, obj_file='teapot_small.obj'):
     parallel = Parallel(num_jobs, worker_fc)
-    np.random.seed(seed)
-    # parallel.add((states[0], 0))
     i = 0
     limit = states.shape[0]
 
